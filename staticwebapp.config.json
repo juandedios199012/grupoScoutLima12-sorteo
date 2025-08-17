@@ -1,0 +1,12 @@
+{
+  "navigationFallback": {
+    "rewrite": "/index.html",
+    "exclude": ["/viewer.html", "/styles.css", "/main.js", "/viewer.js"]
+  },
+  "routes": [
+    { "route": "/viewer", "rewrite": "/viewer.html" }
+  ],
+  "responseOverrides": {
+    "404": { "rewrite": "/index.html" }
+  }
+}

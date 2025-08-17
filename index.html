@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Aniversario 85 - Lima 12 | Sorteo 1..50</title>
+  <meta name="description" content="Sorteo Lima 12: elige un número del 1 al 50. Un número por persona." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="hero">
+    <div class="wrap">
+      <h1>Aniversario 85 - Grupo Scout Lima 12</h1>
+      <p class="subtitle">Elige un número del 1 al 50. Un número por persona.</p>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="card">
+      <h2>Participa</h2>
+      <form id="form" novalidate>
+        <label class="field">
+          <span>Nombre completo <b class="req">*</b></span>
+          <input id="nombre" name="nombre" type="text" autocomplete="name" required />
+          <small class="error" data-for="nombre"></small>
+        </label>
+
+        <div class="field">
+          <span>Elige tu número</span>
+          <div class="toolbar">
+            <button id="refresh" type="button" class="secondary">Refrescar</button>
+            <small id="lastUpdate" class="muted"></small>
+          </div>
+          <div id="grid" class="numbers-grid" aria-live="polite"></div>
+          <input type="hidden" id="numero" name="numero" required />
+          <small class="error" data-for="numero"></small>
+        </div>
+
+        <div class="actions">
+          <button id="submit" type="submit" class="primary">Reservar número</button>
+          <span id="status" role="status" aria-live="polite"></span>
+        </div>
+      </form>
+    </section>
+
+    <section class="card muted">
+      <details>
+        <summary>¿Cómo funciona?</summary>
+        <ul>
+          <li>No hay cuentas ni contraseñas.</li>
+          <li>Tu número queda reservado al enviar el formulario.</li>
+          <li>Si un número está tomado, aparecerá bloqueado.</li>
+        </ul>
+      </details>
+    </section>
+  </main>
+
+  <footer class="footer wrap">
+    <small>© 2025 Grupo Scout Lima 12 — Sorteo Aniversario 85</small>
+  </footer>
+
+  <script type="module" src="/main.js"></script>
+</body>
+</html>

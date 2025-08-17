@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sólo consulta | Números ocupados</title>
+  <meta name="description" content="Vista de sólo lectura de los números ocupados" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="hero">
+    <div class="wrap">
+      <h1>Consulta de Números</h1>
+      <p class="subtitle">Sólo lectura. Se actualiza automáticamente.</p>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="card">
+      <div class="field">
+        <div class="toolbar">
+          <small id="lastUpdate" class="muted"></small>
+        </div>
+        <div id="grid" class="numbers-grid" aria-live="polite"></div>
+      </div>
+      <div class="actions">
+        <span id="status" role="status" aria-live="polite"></span>
+      </div>
+    </section>
+    <section class="card muted">
+      <small>Tip: si notas retraso, recarga la página; depende de la publicación del CSV del Sheet.</small>
+    </section>
+  </main>
+
+  <footer class="footer wrap">
+    <small>© 2025 Vista de consulta</small>
+  </footer>
+
+  <script type="module" src="/viewer.js"></script>
+</body>
+</html>
