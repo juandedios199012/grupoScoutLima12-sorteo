@@ -1,5 +1,6 @@
 # Sorteo Lima 12 — 1..50 (sin backend)
-Hola Bienvenidos Grupo Scout Lima 12
+Hola Bienvenidos Grupo Scout Lima 12 
+Aniversario 85
 App web de una sola pantalla para reservar un número del 1 al 50. Sin APIs propias ni bases de datos SQL: usa Google Forms para recibir envíos y un Google Sheet publicado (CSV) para mostrar qué números ya están tomados.
 
 ## Flujo
