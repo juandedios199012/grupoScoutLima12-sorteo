@@ -22,8 +22,7 @@ input:focus{border-color:#3ea6ff;box-shadow:0 0 0 3px rgba(62,166,255,.15)}
 .muted{color:#8da2bf}
 .number{display:flex;align-items:center;justify-content:center;padding:12px 0;border:1px solid #243347;border-radius:8px;background:#0b1220;color:#c8d6e5;cursor:pointer;user-select:none;transition:all .15s ease}
 .number:hover{background:#102036;border-color:#2e4360}
-.number.taken{background:#1a2433;border-color:#2a3b55;color:#627a9b;cursor:not-allowed;position:relative}
-.number.taken::after{content:"ocupado";position:absolute;bottom:4px;right:6px;font-size:10px;color:#8da2bf}
+.number.taken{background:#215b8a;border-color:#3ea6ff;color:#dbefff;cursor:not-allowed}
 .number.selected{background:#2b5cff;border-color:#3ea6ff;color:white;box-shadow:0 0 0 3px rgba(62,166,255,.2)}
 
 .actions{display:flex;align-items:center;gap:12px;margin-top:12px}
