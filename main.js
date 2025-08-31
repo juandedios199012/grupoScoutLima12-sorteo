@@ -115,11 +115,11 @@ function parseCSV(text){
   return rows;
 }
 
-// Obtiene la lista de números comprados y el nombre del comprador
-async function fetchBoughtNumbers(){
+// Obtiene solo la lista de números bloqueados (sin comprador)
+async function fetchTakenNumbers(){
   if(!SHEET_CSV_URL){
     console.warn('sheetCsvUrl no configurado');
-    return [];
+    return new Set();
   }
   try{
     const bust = (SHEET_CSV_URL.includes('?') ? '&' : '?') + 'cb=' + Date.now();
@@ -127,60 +127,58 @@ async function fetchBoughtNumbers(){
     if(!res.ok) throw new Error('No se pudo leer el Sheet (HTTP '+res.status+')');
     const text = await res.text();
     const rows = parseCSV(text).filter(r=>r.length && r.some(c=>c!==''));
-    if(rows.length === 0) return [];
+    if(rows.length === 0) return new Set();
     const headers = rows[0].map(h=>String(h||'').trim().toLowerCase());
-    // Busca índice de número y nombre
-    let idxNum = -1, idxName = -1;
+    let idx = -1;
     if(Number.isInteger(CONFIG.csvNumberColIndex)){
-      idxNum = CONFIG.csvNumberColIndex;
+      idx = CONFIG.csvNumberColIndex;
     } else {
       const wanted = String(CONFIG.csvNumberHeader||'').normalize('NFD').replace(/\p{Diacritic}/gu,'');
-      idxNum = headers.findIndex(h=>{
+      idx = headers.findIndex(h=>{
         const norm = h.normalize('NFD').replace(/\p{Diacritic}/gu,'');
         return /^(numero|nro|num)$/.test(norm) || norm===wanted;
       });
     }
-    // Busca columna de nombre
-    idxName = headers.findIndex(h=>/^(nombre|comprador|name)$/i.test(h));
     const body = rows.slice(1);
-    const bought = [];
-    for(const r of body){
-      const vNum = idxNum>-1 ? r[idxNum] : r[r.length-1];
-      const vName = idxName>-1 ? r[idxName] : '';
-      const n = parseInt(String(vNum||'').trim(),10);
-      if(!isNaN(n)) bought.push({numero:n, nombre:String(vName||'').trim()});
+    const nums = new Set();
+    if(idx === -1){
+      for(const r of body){
+        const v = r[r.length-1];
+        const n = parseInt(String(v||'').trim(),10);
+        if(!isNaN(n)) nums.add(n);
+      }
+      return nums;
     }
-    return bought;
+    for(const r of body){
+      const v = r[idx];
+      const n = parseInt(String(v||'').trim(),10);
+      if(!isNaN(n)) nums.add(n);
+    }
+    return nums;
   }catch(e){
     console.error('Error obteniendo CSV', e, 'URL usada:', SHEET_CSV_URL);
     setStatus('No se pudo cargar disponibilidad. Verifica que el Sheet esté publicado como CSV.', 'error');
-    return [];
+    return new Set();
   }
 }
 
-// Renderiza la vista de consulta: tabla de comprados y lista de disponibles
-function renderConsulta(boughtList){
-  const consultaDiv = document.getElementById('consulta');
-  consultaDiv.innerHTML = '';
-  // Tabla de comprados
-  const table = document.createElement('table');
-  table.className = 'bought-table';
-  table.innerHTML = `<thead><tr><th>Número</th><th>Comprador</th></tr></thead><tbody></tbody>`;
-  const tbody = table.querySelector('tbody');
-  boughtList.forEach(item => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${item.numero}</td><td>${item.nombre||'-'}</td>`;
-    tbody.appendChild(tr);
-  });
-  consultaDiv.appendChild(table);
-  // Lista de disponibles
-  const allNumbers = Array.from({length:TOTAL_NUMBERS}, (_,i)=>i+1);
-  const boughtNums = new Set(boughtList.map(x=>x.numero));
-  const disponibles = allNumbers.filter(n=>!boughtNums.has(n));
-  const dispDiv = document.createElement('div');
-  dispDiv.className = 'disponibles-list';
-  dispDiv.innerHTML = `<strong>Números disponibles:</strong> ${disponibles.length ? disponibles.join(', ') : 'Ninguno'}`;
-  consultaDiv.appendChild(dispDiv);
+// Renderiza solo la lista de números bloqueados como botones (como antes)
+function renderGrid(){
+  const grid = document.getElementById('grid');
+  grid.innerHTML='';
+  const effectiveTaken = getEffectiveTaken();
+  const frag = document.createDocumentFragment();
+  for(let i=1;i<=TOTAL_NUMBERS;i++){
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'number'+(effectiveTaken.has(i)?' taken':'')+(selected===i?' selected':'');
+    btn.textContent = String(i);
+    btn.dataset.n = String(i);
+    if(effectiveTaken.has(i)) btn.disabled = true;
+    btn.addEventListener('click', ()=>selectNumber(i));
+    frag.appendChild(btn);
+  }
+  grid.appendChild(frag);
 }
 
 function selectNumber(n){
@@ -381,27 +379,45 @@ async function init(){
     }
   }
 
-  async function refreshConsulta(){
-    const boughtList = await fetchBoughtNumbers();
-    renderConsulta(boughtList);
+  async function refreshAvailability(){
+    const latest = await fetchTakenNumbers();
+    if(CONFIG.debug){
+      const sample = Array.from(latest).slice(0,10);
+      console.log('[DEBUG] CSV disponibilidad. total=', latest.size, 'muestra=', sample);
+    }
+    // Actualiza seenLocks con los números observados en CSV
+    if(CONFIG.stickySeenTtlMs && CONFIG.stickySeenTtlMs>0){
+      const now = Date.now();
+      for(const n of latest){
+        seenLocks.set(n, now + CONFIG.stickySeenTtlMs);
+      }
+    }
+    const changed = latest.size !== takenSet.size || Array.from(latest).some(n=>!takenSet.has(n));
+    if(changed){
+      takenSet = latest;
+      renderGrid();
+    } else {
+      // aun si no cambia, actualiza el estado visual para pending locks
+      renderGrid();
+    }
     setLastUpdate();
   }
 
   // Listeners
   $('#form').addEventListener('submit', submitForm);
   refreshBtn && refreshBtn.addEventListener('click', async ()=>{
-    refreshBtn.disabled = true; await refreshConsulta(); refreshBtn.disabled = false;
+    refreshBtn.disabled = true; await refreshAvailability(); refreshBtn.disabled = false;
   });
 
   // Auto-refresh configurable
   if(CONFIG.autoRefreshMs){
     setInterval(async ()=>{
-      try{ await refreshConsulta(); }catch{}
+      try{ await refreshAvailability(); }catch{}
     }, CONFIG.autoRefreshMs);
   }
 
   // Primer refresh ya con helpers definidos
-  await refreshConsulta();
+  await refreshAvailability();
   setStatus('');
 }
 
