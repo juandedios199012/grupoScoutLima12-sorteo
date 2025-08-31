@@ -56,66 +56,76 @@ function parseCSV(text){
   return rows;
 }
 
-async function fetchTakenNumbers(){
-  if(!SHEET_CSV_URL){ setStatus('Hoja no configurada', 'error'); return new Set(); }
+// Obtiene lista de números comprados y nombre del comprador
+async function fetchBoughtNumbers(){
+  if(!SHEET_CSV_URL){ setStatus('Hoja no configurada', 'error'); return []; }
   try{
     const bust = (SHEET_CSV_URL.includes('?') ? '&' : '?') + 'cb=' + Date.now();
     const res = await fetch(SHEET_CSV_URL + bust, { cache: 'no-store' });
     const text = await res.text();
     const rows = parseCSV(text).filter(r=>r.length && r.some(c=>c!==''));
-    if(rows.length===0) return new Set();
+    if(rows.length===0) return [];
     const headers = rows[0].map(h=>String(h||'').trim().toLowerCase());
-    let idx = -1;
+    let idxNum = -1, idxName = -1;
     if(Number.isInteger(CONFIG.csvNumberColIndex)){
-      idx = CONFIG.csvNumberColIndex;
+      idxNum = CONFIG.csvNumberColIndex;
     }else{
       const wanted = String(CONFIG.csvNumberHeader||'').normalize('NFD').replace(/\p{Diacritic}/gu,'');
-      idx = headers.findIndex(h=>{
+      idxNum = headers.findIndex(h=>{
         const norm = h.normalize('NFD').replace(/\p{Diacritic}/gu,'');
         return /^(numero|nro|num)$/.test(norm) || norm===wanted;
       });
     }
+    idxName = headers.findIndex(h=>/^(nombre|comprador|name)$/i.test(h));
     const body = rows.slice(1);
-    const nums = new Set();
-    if(idx === -1){
-      for(const r of body){
-        const v = r[r.length-1];
-        const n = parseInt(String(v||'').trim(),10);
-        if(!isNaN(n)) nums.add(n);
-      }
-      return nums;
-    }
+    const bought = [];
     for(const r of body){
-      const v = r[idx];
-      const n = parseInt(String(v||'').trim(),10);
-      if(!isNaN(n)) nums.add(n);
+      const vNum = idxNum>-1 ? r[idxNum] : r[r.length-1];
+      const vName = idxName>-1 ? r[idxName] : '';
+      const n = parseInt(String(vNum||'').trim(),10);
+      if(!isNaN(n)) bought.push({numero:n, nombre:String(vName||'').trim()});
     }
-    return nums;
+    return bought;
   }catch(e){
     console.error('Error CSV', e);
     setStatus('No se pudo cargar la disponibilidad.', 'error');
-    return new Set();
+    return [];
   }
 }
 
-function renderGrid(taken){
+// Renderiza tabla de comprados y lista de disponibles
+function renderConsulta(boughtList){
   const grid = $('#grid');
-  grid.innerHTML='';
-  const frag = document.createDocumentFragment();
-  for(let i=1;i<=CONFIG.totalNumbers;i++){
-    const btn = document.createElement('button');
-    btn.type='button';
-    btn.className = 'number'+(taken.has(i)?' taken':'');
-    btn.textContent = String(i);
-    btn.disabled = true; // sólo lectura
-    frag.appendChild(btn);
-  }
-  grid.appendChild(frag);
+  grid.innerHTML = '';
+  // Tabla de comprados mejorada
+  const table = document.createElement('table');
+  table.className = 'bought-table';
+  table.style.width = '100%';
+  table.style.borderCollapse = 'collapse';
+  table.innerHTML = `<thead><tr style='background:#f5f5f5;'><th style='padding:8px;border-bottom:2px solid #ccc;'>Número</th><th style='padding:8px;border-bottom:2px solid #ccc;'>Comprador</th></tr></thead><tbody></tbody>`;
+  const tbody = table.querySelector('tbody');
+  boughtList.forEach((item, idx) => {
+    const tr = document.createElement('tr');
+    tr.style.background = idx%2===0 ? '#fff' : '#f9f9f9';
+    tr.innerHTML = `<td style='padding:8px;border-bottom:1px solid #eee;text-align:center;'>${item.numero}</td><td style='padding:8px;border-bottom:1px solid #eee;font-weight:600;color:#2a5d9f;'>${item.nombre||'-'}</td>`;
+    tbody.appendChild(tr);
+  });
+  grid.appendChild(table);
+  // Lista de disponibles mejorada
+  const allNumbers = Array.from({length:CONFIG.totalNumbers}, (_,i)=>i+1);
+  const boughtNums = new Set(boughtList.map(x=>x.numero));
+  const disponibles = allNumbers.filter(n=>!boughtNums.has(n));
+  const dispDiv = document.createElement('div');
+  dispDiv.className = 'disponibles-list';
+  dispDiv.style.marginTop = '2em';
+  dispDiv.innerHTML = `<strong style='font-size:1.1em;'>Números disponibles:</strong> ` +
+    (disponibles.length ? disponibles.map(n => `<span style='display:inline-block;background:#e3f7e3;color:#2a5d9f;border-radius:12px;padding:4px 10px;margin:2px 2px;font-weight:600;'>${n}</span>`).join('') : '<span style="color:#ff6b6b;font-weight:600;">Ninguno</span>');
+  grid.appendChild(dispDiv);
 }
 
 async function tick(){
-  const taken = await fetchTakenNumbers();
-  renderGrid(taken);
+  const boughtList = await fetchBoughtNumbers();
+  renderConsulta(boughtList);
   const d = new Date();
   const hh = String(d.getHours()).padStart(2,'0');
   const mm = String(d.getMinutes()).padStart(2,'0');
